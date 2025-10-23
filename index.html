@@ -3,20 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PsycheQuest — Exam 2 Study Game (Enhanced)</title>
+  <title>PsycheQuest — Exam 2 Study Game (MC + Retry)</title>
   <style>
     :root{--bg:#0f1724;--card:#0b1220;--accent:#7c3aed;--muted:#9aa4b2;--glass:rgba(255,255,255,0.04)}
     *{box-sizing:border-box;font-family:Inter,Arial,Helvetica,sans-serif}
     body{margin:0;background:linear-gradient(180deg,#071029 0%,#07192a 60%);color:#e6eef6;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
     .app{width:100%;max-width:1000px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border-radius:12px;padding:18px;box-shadow:0 10px 30px rgba(2,6,23,0.6)}
-    header{display:flex;gap:12px;align-items:center;justify-content:space-between}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
     h1{margin:0;font-size:20px}
     .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     select,button{background:var(--card);border:1px solid rgba(255,255,255,0.04);color:inherit;padding:8px 12px;border-radius:8px;cursor:pointer}
     .main{display:grid;grid-template-columns:1fr 360px;gap:18px;margin-top:16px}
-    .card{background:var(--card);padding:20px;border-radius:12px;min-height:260px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;position:relative}
-    .qtext{font-size:18px;line-height:1.4}
-    .answer{margin-top:14px;color:var(--muted);min-height:60px}
+    .card{background:var(--card);padding:20px;border-radius:12px;min-height:280px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;position:relative}
+    .qtext{font-size:18px;line-height:1.4;margin-bottom:14px}
+    .answers{display:flex;flex-direction:column;gap:8px;width:100%;max-width:400px}
+    .answer-btn{padding:10px;border-radius:8px;border:none;background:var(--glass);color:inherit;cursor:pointer;text-align:left}
+    .answer-btn:hover{background:rgba(124,58,237,0.3)}
     .actions{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap}
     .small{font-size:13px;color:var(--muted)}
     .side{padding:16px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);border-radius:12px}
@@ -25,7 +27,6 @@
     .progress{height:10px;background:rgba(255,255,255,0.05);border-radius:10px;overflow:hidden;margin-top:8px}
     .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#00d4ff);width:0%}
     footer{margin-top:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
-    .hidden{display:none}
     .tag{background:rgba(255,255,255,0.03);padding:6px 8px;border-radius:999px;font-size:12px}
     @media(max-width:900px){.main{grid-template-columns:1fr} .side{order:2}}
   </style>
@@ -35,34 +36,32 @@
     <header>
       <div>
         <h1>PsycheQuest — Exam 2 Study Game</h1>
-        <div class="small">Tracks progress and lets you retry missed questions!</div>
+        <div class="small">MC Questions + Retry Missed Questions Mode</div>
       </div>
       <div class="controls">
         <label class="small">Mode</label>
-        <select id="modeSelect"><option value="practice">Flash Mode</option><option value="quiz" selected>Quiz Mode</option></select>
+        <select id="modeSelect"><option value="practice">Flash</option><option value="quiz" selected>Quiz</option></select>
         <label class="small">Topic</label>
         <select id="topicSelect"><option value="all">All Topics</option><option value="consciousness">Consciousness</option><option value="development">Development</option><option value="sensation">Sensation</option><option value="conditioning">Conditioning</option></select>
         <button id="startBtn">Start / Reset</button>
         <button id="retryBtn">Retry Missed Questions</button>
       </div>
+      <div class="small tag" id="answeredCounter">Answered: 0 / 0</div>
     </header>
 
     <div class="main">
       <div>
         <div class="card" id="card">
           <div class="qtext" id="qtext">Press Start to begin!</div>
-          <div class="answer" id="answer"></div>
+          <div class="answers" id="answers"></div>
         </div>
 
         <div class="actions">
           <button id="flipBtn">Show Answer</button>
-          <button id="correctBtn">Correct ✓</button>
-          <button id="wrongBtn">Wrong ✗</button>
         </div>
 
         <div style="display:flex;justify-content:center;margin-top:12px;gap:8px;flex-wrap:wrap">
           <div class="small tag">Streak: <span id="streak">0</span></div>
-          <div class="small tag">Answered: <span id="answeredCount">0</span>/<span id="totalCount">0</span></div>
           <div class="small tag">Boss progress: <span id="bossProgress">0</span>/10</div>
         </div>
       </div>
@@ -74,7 +73,6 @@
           <div class="stat"><div class="small">Correct</div><div style="font-size:20px" id="correctCount">0</div></div>
           <div class="stat"><div class="small">Wrong</div><div style="font-size:20px" id="wrongCount">0</div></div>
         </div>
-
         <div style="margin-top:12px">
           <div class="small">Progress</div>
           <div class="progress"><i id="progressBar"></i></div>
@@ -88,64 +86,35 @@
   </div>
 
   <script>
+    // Example database with multiple-choice answers
     const DB = {
       consciousness: [
-        {q:"What is selective attention?", a:"The focusing of conscious awareness on a particular stimulus while ignoring others."},
-        {q:"What is the suprachiasmatic nucleus (SCN)?", a:"A brain structure in the hypothalamus that regulates circadian rhythms."}
+        {q:"What is selective attention?", options:["Focus on a specific stimulus","Notice everything at once","Sleep regulation","Memory consolidation"], a:0},
+        {q:"What is the suprachiasmatic nucleus (SCN)?", options:["Body clock regulator","Dream generator","Reflex center","Motor cortex area"], a:0}
       ],
       development: [
-        {q:"What is Piaget's approach to cognitive development?", a:"Children actively construct knowledge through interaction; four invariant stages."}
+        {q:"What is Piaget's approach?", options:["Stage-based cognitive development","Classical conditioning","Behaviorist learning","Psychoanalytic stages"], a:0}
       ]
     };
 
     const ALL = [...DB.consciousness, ...DB.development];
 
-    let pool = [], missed = [], currentCard = null, score=0, correct=0, wrong=0, streak=0, bossProgress=0, answered=0;
+    let pool=[], missed=[], currentCard=null, score=0, correct=0, wrong=0, streak=0, bossProgress=0, answered=0, total=0;
     let mode='quiz', timerInterval=null, timeLeft=15;
 
-    const qtext=document.getElementById('qtext'), answerEl=document.getElementById('answer'), scoreEl=document.getElementById('score'), timerEl=document.getElementById('timer');
-    const correctEl=document.getElementById('correctCount'), wrongEl=document.getElementById('wrongCount'), streakEl=document.getElementById('streak');
+    const qtext=document.getElementById('qtext'), answersEl=document.getElementById('answers'), scoreEl=document.getElementById('score');
+    const timerEl=document.getElementById('timer'), correctEl=document.getElementById('correctCount');
+    const wrongEl=document.getElementById('wrongCount'), streakEl=document.getElementById('streak');
     const progressBar=document.getElementById('progressBar'), bossEl=document.getElementById('bossProgress');
-    const answeredEl=document.getElementById('answeredCount'), totalEl=document.getElementById('totalCount');
+    const answeredCounter=document.getElementById('answeredCounter');
 
     document.getElementById('startBtn').onclick=()=>start(false);
     document.getElementById('retryBtn').onclick=()=>start(true);
-    document.getElementById('flipBtn').onclick=()=>{if(currentCard) answerEl.textContent=currentCard.a};
-    document.getElementById('correctBtn').onclick=()=>markCorrect();
-    document.getElementById('wrongBtn').onclick=()=>markWrong();
 
-    function buildPool(topic, retryMode){
-      if(retryMode){ pool = [...missed]; missed=[]; }
-      else {
-        if(topic==='all') pool=[...ALL]; else pool=DB[topic]||[];
-      }
-      shuffle(pool);
-      totalEl.textContent = pool.length;
+    function buildPool(topic,retryMode){
+      if(retryMode){pool=[...missed]; missed=[];}
+      else{pool=(topic==='all')?[...ALL]:DB[topic]||[];}
+      shuffle(pool); total=pool.length; answered=0;
     }
 
-    function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
-
-    function start(retryMode){
-      const topic=document.getElementById('topicSelect').value;
-      buildPool(topic,retryMode);
-      score=correct=wrong=streak=bossProgress=answered=0;updateStats();nextCard();
-    }
-
-    function nextCard(){
-      clearTimer();
-      if(answered>=pool.length){qtext.textContent='All questions done!';answerEl.textContent='';return;}
-      currentCard=pool[answered];
-      qtext.textContent=currentCard.q;answerEl.textContent='';answered++;updateStats();
-      if(mode==='quiz'){timeLeft=15;timerEl.textContent=timeLeft+'s';timerInterval=setInterval(()=>{timeLeft--;timerEl.textContent=timeLeft+'s';if(timeLeft<=0){markWrong();}},1000);} else timerEl.textContent='—';
-    }
-
-    function clearTimer(){if(timerInterval){clearInterval(timerInterval);timerInterval=null;}}
-
-    function markCorrect(){clearTimer();score+=10;correct++;streak++;if(streak%3===0)score+=10;bossProgress++;updateStats();setTimeout(nextCard,300);}
-
-    function markWrong(){clearTimer();wrong++;streak=0;if(currentCard)missed.push(currentCard);answerEl.textContent=currentCard.a;updateStats();setTimeout(nextCard,1000);}
-
-    function updateStats(){scoreEl.textContent=score;correctEl.textContent=correct;wrongEl.textContent=wrong;streakEl.textContent=streak;bossEl.textContent=bossProgress;answeredEl.textContent=answered;progressBar.style.width=(pool.length?Math.round(answered/pool.length*100):0)+'%';}
-  </script>
-</body>
-</html>
+    function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random
