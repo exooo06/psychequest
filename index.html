@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PsycheQuest: Psychology 101 Study Game</title>
+<style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(160deg, #7f5af0, #2cb67d);
+    color: #fff;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+  }
+  h1 { margin-top: 30px; }
+  .card {
+    background: rgba(0,0,0,0.3);
+    border-radius: 20px;
+    padding: 20px;
+    width: 80%;
+    max-width: 600px;
+    margin: 30px auto;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  }
+  .question {
+    font-size: 1.3em;
+    margin-bottom: 20px;
+  }
+  .choices {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  button.choice {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  button.choice:hover {
+    background: rgba(255,255,255,0.3);
+  }
+  button.correct {
+    background: #2cb67d !important;
+  }
+  button.wrong {
+    background: #ef4565 !important;
+  }
+  .score {
+    margin-top: 20px;
+    font-size: 1.2em;
+  }
+</style>
+</head>
+<body>
+  <h1>🧠 PsycheQuest: Psychology 101 Study Game</h1>
+  <div class="card" id="game">
+    <div class="question" id="question">Loading...</div>
+    <div class="choices" id="choices"></div>
+    <div class="score" id="score">Score: 0</div>
+  </div>
+
+<script>
+const QUESTIONS = [
+  {
+    q: "What is selective attention?",
+    a: "The focusing of conscious awareness on a particular stimulus.",
+    distractors: [
+      "The inability to notice changes in the environment.",
+      "The process of encoding sensory input into memory.",
+      "The act of filtering sound frequencies during sleep."
+    ]
+  },
+  {
+    q: "What is inattentional blindness?",
+    a: "Failing to see visible objects when our attention is directed elsewhere.",
+    distractors: [
+      "A disorder that affects peripheral vision only.",
+      "A condition caused by damage to the occipital lobe.",
+      "The brain’s way of adapting to dim light conditions."
+    ]
+  },
+  {
+    q: "What is REM sleep known for?",
+    a: "Rapid eye movement and vivid dreaming while muscles remain relaxed.",
+    distractors: [
+      "Deep sleep with minimal brain activity.",
+      "Light sleep characterized by muscle twitching.",
+      "Transitioning between wakefulness and drowsiness."
+    ]
+  },
+  {
+    q: "According to Piaget, what is object permanence?",
+    a: "Understanding that objects continue to exist even when they are not seen.",
+    distractors: [
+      "The ability to mentally reverse a sequence of actions.",
+      "Recognizing that objects can take on different forms.",
+      "Believing that inanimate objects have feelings."
+    ]
+  },
+  {
+    q: "What did Harlow’s monkey experiments demonstrate?",
+    a: "Attachment is based on comfort and security, not just food.",
+    distractors: [
+      "Cognitive development depends primarily on language skills.",
+      "Reinforcement is the key factor in moral behavior.",
+      "Learning occurs through punishment avoidance."
+    ]
+  },
+  {
+    q: "What is classical conditioning?",
+    a: "A type of learning where a neutral stimulus becomes associated with a response.",
+    distractors: [
+      "Learning through observing and imitating others’ behavior.",
+      "Learning that results from consequences and rewards.",
+      "Learning that occurs only during deep sleep."
+    ]
+  },
+  {
+    q: "What is the function of the suprachiasmatic nucleus (SCN)?",
+    a: "It controls circadian rhythms in response to light.",
+    distractors: [
+      "It produces melatonin directly in the brain.",
+      "It regulates hunger and satiety signals.",
+      "It processes sensory input from the spinal cord."
+    ]
+  },
+  {
+    q: "What is conservation according to Piaget?",
+    a: "Understanding that quantity remains the same despite changes in shape or appearance.",
+    distractors: [
+      "The belief that objects have human emotions.",
+      "Knowing that others may have different perspectives.",
+      "Remembering past experiences and applying them to new tasks."
+    ]
+  },
+  {
+    q: "What are Gestalt principles primarily concerned with?",
+    a: "How we organize visual information into meaningful wholes.",
+    distractors: [
+      "How the brain processes sound and speech.",
+      "How individuals remember emotional experiences.",
+      "How cognitive dissonance influences decision-making."
+    ]
+  },
+  {
+    q: "According to Erikson, what is the main conflict in adolescence?",
+    a: "Identity vs. role confusion.",
+    distractors: [
+      "Trust vs. mistrust.",
+      "Autonomy vs. shame and doubt.",
+      "Intimacy vs. isolation."
+    ]
+  }
+];
+
+let score = 0;
+let index = 0;
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+function showQuestion() {
+  if (index >= QUESTIONS.length) {
+    document.getElementById("question").innerText = "🎉 You finished the game!";
+    document.getElementById("choices").innerHTML = "";
+    return;
+  }
+  
+  const qData = QUESTIONS[index];
+  document.getElementById("question").innerText = qData.q;
+
+  const options = [
+    {text: qData.a, correct: true},
+    ...qData.distractors.map(d => ({text: d, correct: false}))
+  ];
+  shuffle(options);
+
+  const choicesDiv = document.getElementById("choices");
+  choicesDiv.innerHTML = "";
+  
+  const labels = ["A", "B", "C", "D"];
+  options.forEach((opt, i) => {
+    const btn = document.createElement("button");
+    btn.classList.add("choice");
+    btn.innerText = `${labels[i]}. ${opt.text}`;
+    btn.onclick = () => handleAnswer(btn, opt.correct);
+    choicesDiv.appendChild(btn);
+  });
+}
+
+function handleAnswer(btn, correct) {
+  const buttons = document.querySelectorAll(".choice");
+  buttons.forEach(b => b.disabled = true);
+  
+  if (correct) {
+    btn.classList.add("correct");
+    score += 10;
+  } else {
+    btn.classList.add("wrong");
+  }
+  
+  document.getElementById("score").innerText = `Score: ${score}`;
+  
+  setTimeout(() => {
+    index++;
+    showQuestion();
+  }, 1000);
+}
+
+showQuestion();
+</script>
+</body>
+</html>
